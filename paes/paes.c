@@ -64,6 +64,7 @@ char *input_file;
 double avg_watts=0;
 double total_resp_time=0;
 double cnt_resp_time=0;
+int current_clock=0;
 
 
 //structure using thread function
@@ -155,8 +156,8 @@ void *read_thread(void *parms)
 		}
 		while(1)
 		{
-                	if (sigwait(&sigset, &sig_no) != 0)
-	                       	 fprintf(stderr, "Failed to wait for next clock tick\n");
+            if (sigwait(&sigset, &sig_no) != 0)
+                fprintf(stderr, "Failed to wait for next clock tick\n");
 			count++;
 			if((dir_ent = readdir(dp)) == NULL)
 			{
@@ -170,7 +171,7 @@ void *read_thread(void *parms)
 
 			file_cnt++;
 			sprintf(decrypt_file_name_buf, "%s%d",input_file,file_cnt);			
-			
+		    fprintf(stderr,"%s\n",decrypt_file_name_buf);	
 			fp = fopen(decrypt_file_name_buf, "r");
 			
 			fstat(fileno(fp),&file_stat);	
@@ -197,8 +198,8 @@ void *read_thread(void *parms)
 				break;
 			}
 			//read input file
-                	if (sigwait(&sigset, &sig_no) != 0)
-                       	 fprintf(stderr, "Failed to wait for next clock tick\n");
+                if (sigwait(&sigset, &sig_no) != 0)
+                    fprintf(stderr, "Failed to wait for next clock tick\n");
 			//fprintf(stderr, "got timer signal");
 				pthread_mutex_lock(&mutex_lock1);
 				fgets((char*)buf->buffer, sizeof(cl_uchar)*700, fp);
@@ -339,12 +340,67 @@ cl_uchar *hash_password(char *password, size_t size)
 
 void monitor_and_control()
 {
-
+	//monitor
 	double avg_resp_time= total_resp_time /cnt_resp_time;
+    int dvfs_table[7]={600, 543, 480, 420, 350, 266, 177};
+    char cmd_buffer[255]="";
+    int set_clock;
+    int set_num;
 	cnt_resp_time=0;
 	total_resp_time=0;
-
+    
 	printf("%lf ms\t%lf watt\n", avg_resp_time, avg_watts);
+
+	//control
+    switch(current_clock){
+        case 600:
+            set_num = 0;
+            break;
+        case 543:
+            set_num = 1;
+            break;
+        case 480:
+            set_num = 2;
+            break;
+        case 420:
+            set_num = 3;
+            break;
+        case 350:
+            set_num = 4;
+            break;
+        case 266:
+            set_num = 5;
+            break;
+        case 177:
+            set_num = 6;
+            break;
+    }
+
+
+    if (avg_resp_time < 4)
+    {
+        if(current_clock != 177)
+        {
+            set_clock=dvfs_table[set_num+1];
+            sprintf(cmd_buffer, "echo %d > /sys/class/misc/mali0/device/clock",set_clock);
+            system(cmd_buffer);
+        }
+        else        
+            set_clock = dvfs_table[set_num];   
+    }
+    else
+    {
+        if(current_clock != 600)
+        {
+            set_clock=dvfs_table[set_num-1];
+            sprintf(cmd_buffer, "echo %d > /sys/class/misc/mali0/device/clock",set_clock);
+            system(cmd_buffer);
+        }
+        else
+            set_clock = dvfs_table[set_num];   
+    }
+    current_clock = set_clock;
+    printf("current clock : %d\n",current_clock);
 }
 
 /** 
@@ -388,6 +444,9 @@ int main(int argc, char *argv[])
 	sigset_t		sigset;
 	int			rc;
 
+    //dvfs_initializing
+    dvfs_init();
+
 	sigfillset(&sigset);
 	sigaddset(&sigset, TIMER_SIG);
 //	sigaddset(&sigset, SIGALRM);
@@ -406,7 +465,7 @@ int main(int argc, char *argv[])
 	}
 	password_hash = hash_password(password, key_size_bits / 8);
 
-	
+    	
 
 	printf("PARAMETERS:\n");
 	printf("   Input file: %s\n", input_file_name);

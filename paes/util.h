@@ -30,6 +30,6 @@ typedef struct {
 
 void *monitor_power(void *args);
 void *periodic_control(void *args);
-
+void dvfs_init();
 
 #endif	/* _UTIL_H_ */

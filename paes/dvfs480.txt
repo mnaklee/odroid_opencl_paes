@@ -1,0 +1,41 @@
+
+
+-------- PAES --------
+
+
+PARAMETERS:
+   Input file: ./data/shortsample.txt
+   Output file: ./output/aaa
+   AES mode: encrypt
+   Key size: 128
+   Device: gpu
+   File size: 700 bytes
+
+
+Global work size is 64
+Local work size is 8
+Loading OpenCL source code...
+clCreateContextFromType...
+clGetContextInfo...
+
+Device: Mali-T628
+
+clCreateCommandQueue...
+Generating the round keys...
+clCreateProgramWithSource...
+clBuildProgram...
+clCreateKernel...
+clCreateBuffer & co...
+nan ms	0.000000 watt
+nan ms	0.000000 watt
+2.065868 ms	1.150000 watt
+2.000000 ms	1.958000 watt
+2.638710 ms	2.790000 watt
+2.005988 ms	3.614000 watt
+2.000000 ms	4.438000 watt
+2.158537 ms	4.110000 watt
+
+
+----- It ends here... -----
+
+

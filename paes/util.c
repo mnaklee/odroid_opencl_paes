@@ -16,6 +16,14 @@
 
 extern int end_point;
 
+void dvfs_init()
+{
+    printf("dvfs initializing...\n");
+    system("sudo chmod a+rwx /sys/class/misc/mali0/device/dvfs");
+    system("sudo chmod a+rwx /sys/class/misc/mali0/device/clock");
+    system("echo 0 > /sys/class/misc/mali0/device/dvfs");
+}
+
 void * monitor_power(void *args)
 {
 	hid_device *device;

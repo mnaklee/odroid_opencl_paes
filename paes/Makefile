@@ -1,7 +1,7 @@
 .PHONY: all clean indent doc 
 
 ROOT_DIR = ..
-ATISTREAMSDKROOT=$(MALI_ROOT)
+ATISTREAMSDKROOT=/home/odroid/task/OpenCL_SDK
 CC = gcc
 #CFLAGS = $(DEFINES) -Wall -g -Wextra -Werror -pedantic -pedantic-errors -std=c99 -I '$(ATISTREAMSDKROOT)/include/'
 CFLAGS = $(DEFINES) -Wall -g -Wextra -pedantic -pedantic-errors -std=c99 -D_XOPEN_SOURCE=600 -I $(ATISTREAMSDKROOT)/include/ -I$(ROOT_DIR)/smartmeter -lpthread -lrt
