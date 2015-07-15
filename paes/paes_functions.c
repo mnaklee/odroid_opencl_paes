@@ -320,9 +320,17 @@ int apply_aes(cl_uchar * buffer, cl_command_queue * command_queue, cl_kernel * k
 	cl_int error, error1 = CL_SUCCESS;
         cl_event event_write, event_execute, event_read;
 	bool ok=1;
-	cl_uchar * temp = (cl_uchar*)clEnqueueMapBuffer(*command_queue, *cl_buffer, CL_TRUE, CL_MAP_WRITE, 0, sizeof(cl_uchar) * size, 0, NULL, &event_write, &error1);
+#ifdef WRITEBUFFER
+    error1 = clEnqueueWriteBuffer(*command_queue, *cl_buffer, CL_TRUE, 0, sizeof(cl_uchar)*size, (void *)buffer, 0, NULL, &event_write);
+	if (error1 != CL_SUCCESS) {
+		fprintf(stderr, "ERROR: clEnqueueWriteBuffer, error code %d\n", error1);
+		ok = 0;
+		goto cleanup;
+	}
+#else
+    cl_uchar * temp = (cl_uchar*)clEnqueueMapBuffer(*command_queue, *cl_buffer, CL_TRUE, CL_MAP_WRITE, 0, sizeof(cl_uchar) * size, 0, NULL, &event_write, &error1);
 	memcpy(temp, buffer, sizeof(cl_uchar)*size+1);
-//	printf("clEnqueueMapBuffer...\n");
+    //	printf("clEnqueueMapBuffer...\n");
 	if (error1 != CL_SUCCESS) {
 		fprintf(stderr, "ERROR: clEnqueueMapBuffer, error code %d\n", error1);
 		ok = 0;
@@ -334,6 +342,7 @@ int apply_aes(cl_uchar * buffer, cl_command_queue * command_queue, cl_kernel * k
 		ok = 0;
 		goto cleanup;
 	}
+#endif
 	
 	error = clSetKernelArg(*kernel, 0, sizeof(cl_mem), (void *) cl_buffer);
 	error |= clSetKernelArg(*kernel, 1, sizeof(cl_ulong), (void *) &blocks);
@@ -361,7 +370,17 @@ int apply_aes(cl_uchar * buffer, cl_command_queue * command_queue, cl_kernel * k
 	//printf("round execution time: %lf\n", execution_time_msecs(event_execute));
 	execution_time += execution_time_msecs(event_execute);
 
-	temp = (cl_uchar*)clEnqueueMapBuffer(*command_queue, *cl_buffer, CL_TRUE, CL_MAP_READ, 0, sizeof(cl_uchar) * size, 0, NULL, &event_read, &error);
+#ifdef WRITEBUFFER
+    error = clEnqueueReadBuffer(*command_queue, *cl_buffer, CL_TRUE, 0, sizeof(cl_uchar) * size, buffer, 0, NULL, &event_read);
+        clock_gettime(CLOCK_REALTIME, &te);
+	total_time = (te.tv_sec - ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/1000000;
+	if (error != CL_SUCCESS) {
+		fprintf(stderr, "ERROR: clEnqueueReadBuffer, error code %d\n", error);
+		ok = 0;
+		goto cleanup;
+	}
+#else
+    temp = (cl_uchar*)clEnqueueMapBuffer(*command_queue, *cl_buffer, CL_TRUE, CL_MAP_READ, 0, sizeof(cl_uchar) * size, 0, NULL, &event_read, &error);
 	
         clock_gettime(CLOCK_REALTIME, &te);
 	total_time = (te.tv_sec - ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/1000000;
@@ -380,6 +399,7 @@ int apply_aes(cl_uchar * buffer, cl_command_queue * command_queue, cl_kernel * k
 		ok = 0;
 		goto cleanup;
 	}
+#endif
 	
 //	printf("kernel excution time:\t%.3f ms\n", execution_time);
 //	printf("Write time:\t%.3f ms\n", execution_time_msecs(event_write));
