@@ -71,6 +71,7 @@ void write_file(char *file_name, cl_uchar * buffer, size_t size)
 		close(fd);
 		exit(EXIT_FAILURE);
 	}
+//    write(fd, "xx\n",3);
 
 	close(fd);
 }

@@ -2,7 +2,8 @@
 
 cpu_dir="/sys/devices/system/cpu"
 set_gov="userspace"
-cpu_freq=(1400000 1000000 200000)
+#cpu_freq=(1400000 1300000 1200000 1100000 1000000 900000 800000 700000 60000    0 500000 400000 300000 200000)
+cpu_freq=(500000 400000 300000 200000)
 
 gpu_dir="/sys/class/misc/mali0/device/clock" 
 gpu_freq=(600 543 480 420 350 266 177)
@@ -11,7 +12,7 @@ key_size=(128 192 256)
 
 
 #setting file permission and governor 
-for ((i=0;i<3;i++))
+for ((i=0;i<4;i++))
 do
     for cpu_num in $cpu_dir/cpu?
     do  

@@ -1,0 +1,94 @@
+
+
+-------- PAES --------
+
+
+PARAMETERS:
+   Input file: ./data/samples.txt
+   Output file: ./output/output
+   AES mode: encrypt
+   Key size: 192
+   Device: gpu
+   File size: 700 bytes
+
+
+Global work size is 64
+Local work size is 8
+Loading OpenCL source code...
+clCreateContextFromType...
+clGetContextInfo...
+
+Device: Mali-T628
+
+clCreateCommandQueue...
+Generating the round keys...
+clCreateProgramWithSource...
+clBuildProgram...
+clCreateKernel...
+clCreateBuffer & co...
+nan ms	0.000000 watt
+nan ms	0.000000 watt
+4.012048 ms	0.564000 watt
+4.005988 ms	1.016000 watt
+4.011976 ms	1.528000 watt
+4.011976 ms	2.038000 watt
+4.006024 ms	2.592000 watt
+4.158537 ms	2.550000 watt
+4.005988 ms	2.610000 watt
+4.006024 ms	2.604000 watt
+4.000000 ms	2.602000 watt
+4.011976 ms	2.562000 watt
+4.146341 ms	2.548000 watt
+4.005988 ms	2.548000 watt
+4.011976 ms	2.556000 watt
+4.006024 ms	2.560000 watt
+4.011976 ms	2.552000 watt
+5.488889 ms	2.554000 watt
+4.012048 ms	2.560000 watt
+4.011976 ms	2.554000 watt
+4.041916 ms	2.550000 watt
+4.012048 ms	2.556000 watt
+4.139394 ms	2.558000 watt
+4.023952 ms	2.548000 watt
+4.005988 ms	2.554000 watt
+4.000000 ms	2.568000 watt
+4.017964 ms	2.564000 watt
+4.157576 ms	2.560000 watt
+4.000000 ms	2.560000 watt
+4.011976 ms	2.552000 watt
+4.011976 ms	2.536000 watt
+4.006024 ms	2.540000 watt
+4.176829 ms	2.542000 watt
+4.011976 ms	2.552000 watt
+4.000000 ms	2.556000 watt
+4.011976 ms	2.560000 watt
+4.018072 ms	2.554000 watt
+4.163636 ms	2.554000 watt
+4.006024 ms	2.546000 watt
+4.011976 ms	2.546000 watt
+4.000000 ms	2.546000 watt
+4.006024 ms	2.552000 watt
+4.398734 ms	2.548000 watt
+4.000000 ms	2.550000 watt
+4.006024 ms	2.552000 watt
+4.005988 ms	2.552000 watt
+4.000000 ms	2.546000 watt
+4.152439 ms	2.550000 watt
+4.005988 ms	2.546000 watt
+4.005988 ms	2.542000 watt
+4.012048 ms	2.544000 watt
+4.024096 ms	2.560000 watt
+4.959184 ms	2.558000 watt
+4.012048 ms	2.552000 watt
+4.005988 ms	2.556000 watt
+4.005988 ms	2.556000 watt
+4.012048 ms	2.540000 watt
+4.151515 ms	2.540000 watt
+4.005988 ms	2.558000 watt
+4.005988 ms	2.550000 watt
+4.018072 ms	2.550000 watt
+
+
+----- It ends here... -----
+
+

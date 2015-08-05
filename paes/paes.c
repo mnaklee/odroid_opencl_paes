@@ -57,7 +57,7 @@ const unsigned short default_key_size_bits = 128;
 
 
 int end_point=FALSE;
-//int thread_select=0;
+int wait_flag=0;
 char *input_file;
 
 // statistics
@@ -111,7 +111,7 @@ void *read_thread(void *parms)
 	Thdata *buf = (Thdata*)parms;
 	aes_mode mode = buf->mode;
 	//signal configure
-	sigemptyset(&sigset);
+/*	sigemptyset(&sigset);
 	sigaddset(&sigset, TIMER_SIG);
 	sigaddset(&sigset, SIGALRM);
 
@@ -130,7 +130,7 @@ void *read_thread(void *parms)
 	if (timer_settime(tid, 0, &ts, NULL) == -1){
 		perror("timer_settime");
 		exit(1);
-	}
+	}*/
 		
 	if(mode==AES_MODE_DECRYPT)
 	{
@@ -155,57 +155,68 @@ void *read_thread(void *parms)
 		}
 		while(1)
 		{
-                	if (sigwait(&sigset, &sig_no) != 0)
-	                       	 fprintf(stderr, "Failed to wait for next clock tick\n");
-			count++;
-			if((dir_ent = readdir(dp)) == NULL)
-			{
-				fclose(fp);
-				end_point=TRUE;
-				pthread_cond_signal(&thread_cond1);	
-				break;
-			}
-			if(strcmp(dir_ent->d_name, ".") == 0 || strcmp(dir_ent->d_name, "..")==0)
-				continue;	
-
-			file_cnt++;
-			sprintf(decrypt_file_name_buf, "%s%d",input_file,file_cnt);			
-			
-			fp = fopen(decrypt_file_name_buf, "r");
-			
-			fstat(fileno(fp),&file_stat);	
-		
-			
-			pthread_mutex_lock(&mutex_lock1);
-			fread((cl_uchar*)buf->buffer, sizeof(cl_uchar),file_stat.st_size, fp);
-			
-			pthread_mutex_unlock(&mutex_lock1);
-			pthread_cond_signal(&thread_cond1);
-		}
+    //            	if (sigwait(&sigset, &sig_no) != 0)
+	  //                     	 fprintf(stderr, "Failed to wait for next clock tick\n");
+            if(!wait_flag)
+            {
+    			count++;
+    			if((dir_ent = readdir(dp)) == NULL)
+    			{
+    				fclose(fp);
+    				end_point=1;
+    				pthread_cond_signal(&thread_cond1);	
+    				break;
+       			}
+    			if(strcmp(dir_ent->d_name, ".") == 0 || strcmp(dir_ent->d_name, "..")==0)
+    				continue;	
+    
+    			file_cnt++;
+    			sprintf(decrypt_file_name_buf, "%s%d",input_file,file_cnt);			
+    			
+    			fp = fopen(decrypt_file_name_buf, "r");
+    			
+    			fstat(fileno(fp),&file_stat);	
+    		
+    			
+    			pthread_mutex_lock(&mutex_lock1);
+    			fread((cl_uchar*)buf->buffer, sizeof(cl_uchar),file_stat.st_size, fp);
+                wait_flag = 1;
+    			
+    			pthread_mutex_unlock(&mutex_lock1);
+    			pthread_cond_signal(&thread_cond1);
+	    	}
+        }
 	}
 	else if(mode == AES_MODE_ENCRYPT)
 	{
         	fp = fopen(input_file, "r");
 	
 		while(1)
-        	{
-			if (feof(fp))
-			{
-				fclose(fp);
-				end_point=TRUE;
-				pthread_cond_signal(&thread_cond1);
-				break;
-			}
-			//read input file
-                	if (sigwait(&sigset, &sig_no) != 0)
-                       	 fprintf(stderr, "Failed to wait for next clock tick\n");
-			//fprintf(stderr, "got timer signal");
-				pthread_mutex_lock(&mutex_lock1);
-				fgets((char*)buf->buffer, sizeof(cl_uchar)*700, fp);
-				pthread_mutex_unlock(&mutex_lock1);		
-				pthread_cond_signal(&thread_cond1);
-	        }
-	
+        {
+    		if (feof(fp))
+    		{
+    			fclose(fp);
+    			end_point=1;
+	    		pthread_cond_signal(&thread_cond1);
+       			break;
+    		}
+            if(!wait_flag)
+            {
+//                fprintf(stderr,"%d\n",wait_flag);
+//	    		read input file
+/*                    	if (sigwait(&sigset, &sig_no) != 0)
+                           	 fprintf(stderr, "Failed to wait for next clock tick\n");
+    			fprintf(stderr, "got timer signal");*/
+    			pthread_mutex_lock(&mutex_lock1);
+    			fgets((char*)buf->buffer, sizeof(cl_uchar)*700, fp);
+    //			fgets((char*)buf->buffer, sizeof(cl_uchar)*1400, fp);
+    //			fgets((char*)buf->buffer, sizeof(cl_uchar)*2800, fp);
+                wait_flag = 1;
+    			pthread_mutex_unlock(&mutex_lock1);		
+	    		pthread_cond_signal(&thread_cond1);
+    	    }
+        
+        }
 	}	
 	pthread_exit((void *) 0);
 }
@@ -388,16 +399,18 @@ int main(int argc, char *argv[])
 	sigset_t		sigset;
 	int			rc;
 
-	sigfillset(&sigset);
+/*	sigfillset(&sigset);
 	sigaddset(&sigset, TIMER_SIG);
 //	sigaddset(&sigset, SIGALRM);
-	pthread_sigmask(SIG_SETMASK, &sigset, NULL);
+	pthread_sigmask(SIG_SETMASK, &sigset, NULL);*/
 	
 	printf("\n\n-------- PAES --------\n\n\n");
 
 	parse_command_line(argc, argv, &input_file_name, &output_file_name, &mode, &key_size_bits, &password, &device);
 	check_arguments(mode, key_size_bits, device);
 	input_file = input_file_name;
+//	size_t size = 1400;
+//	size_t size = 2800;
 	size_t size = 700;
 	size_t dec_size;
 	if (password == NULL) {
@@ -496,38 +509,40 @@ int main(int argc, char *argv[])
 
 		pthread_mutex_lock(&mutex_lock1);
 		pthread_cond_wait(&thread_cond1, &mutex_lock1);
+//        wait_flag = 1;
 		clock_gettime(CLOCK_REALTIME, &ts);
 		
 		//fprintf(stderr ,"output file name : %s\n",output_file_name_buf);
 		
 		//apply aes
-		if (apply_aes(buffer, &command_queue, &kernel, &cl_buffer, &cl_round_key, size, blocks, key_size_bits, global_size, local_size, mode) != -1)
-		{
-		}	
-		if(mode == AES_MODE_ENCRYPT)
-		{		
-			if(end_point==1)
-				break;
-			//setting output file name
-			sprintf(output_file_name_buf, "%s%d",output_file_name,++cnt);
-			write_file(output_file_name_buf, buffer, size);	
-		}
-		else if(mode == AES_MODE_DECRYPT)
-		{
-			if(end_point==1)
-				break;
-			strtok((char*)buffer,"\n");
-			dec_size = sizeof(cl_uchar)*strlen((char*)buffer);
-			write_file_append(output_file_name, buffer, dec_size);
-		}
-		
-
-		clock_gettime(CLOCK_REALTIME, &te);
-		total_time = (te.tv_sec - ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/1000000;
-		total_resp_time=total_resp_time + total_time;
-		cnt_resp_time++;
-		//printf("-----------------%f ms \n",total_time);
-		pthread_mutex_unlock(&mutex_lock1);		
+    	if (apply_aes(buffer, &command_queue, &kernel, &cl_buffer, &cl_round_key, size, blocks, key_size_bits, global_size, local_size, mode) != -1)
+    	{
+    	}	
+   		if(mode == AES_MODE_ENCRYPT)
+   		{	
+   			if(end_point==1)
+   				break;
+   			//setting output file name
+   			sprintf(output_file_name_buf, "%s%d",output_file_name,++cnt);
+   			write_file(output_file_name_buf, buffer, size);	
+   		}
+   		else if(mode == AES_MODE_DECRYPT)
+   		{
+   			if(end_point==1)
+   				break;
+       			strtok((char*)buffer,"\n");
+    			dec_size = sizeof(cl_uchar)*strlen((char*)buffer);
+    			write_file_append(output_file_name, buffer, dec_size);
+   		}
+   
+   		clock_gettime(CLOCK_REALTIME, &te);
+   		total_time = (te.tv_sec - ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/1000000;
+   		total_resp_time=total_resp_time + total_time;
+   		cnt_resp_time++;
+        wait_flag = 0;
+   		//printf("-----------------%f ms \n",total_time);
+   		pthread_mutex_unlock(&mutex_lock1);		
+        
 	}
 
 	if (buffer)
