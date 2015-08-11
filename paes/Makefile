@@ -4,7 +4,7 @@ ROOT_DIR = ..
 ATISTREAMSDKROOT=/home/odroid/task/OpenCL_SDK
 CC = gcc
 CFLAGS = $(DEFINES) -Wall -g -Wextra -pedantic -pedantic-errors -std=c99 -D_XOPEN_SOURCE=600 -I $(ATISTREAMSDKROOT)/include/ -I$(ROOT_DIR)/smartmeter -lpthread -lrt
-#CFLAGS = $(DEFINES) -Wall -g -Wextra -pedantic -pedantic-errors -std=c99 -D_XOPEN_SOURCE=600 -DWRITEBUFFER -I $(ATISTREAMSDKROOT)/include/ -I$(ROOT_DIR)/smartmeter -lpthread -lrt
+#CFLAGS = $(DEFINES) -Wall -g -Wextra -pedantic -pedantic-errors -std=c99 -D_XOPEN_SOURCE=600 -DINTERRUPT -I $(ATISTREAMSDKROOT)/include/ -I$(ROOT_DIR)/smartmeter -lpthread -lrt
 LDFLAGS = -L$(ATISTREAMSDKROOT)/lib -L$(ROOT_DIR)/libs $ -lOpenCL -lsmartmeter -lusb-1.0
 SOURCES = $(wildcard *.c)
 OBJECTS = $(patsubst %.c, %.o, $(SOURCES))

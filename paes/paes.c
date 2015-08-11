@@ -49,6 +49,8 @@
 #include "util.h"
 
 #define TIMER_SIG SIGRTMIN
+
+#define SET_SIZE 3500
 //#define TIMER_SIG SIGALRM
 /**
  * The default key size in bits, if not specified by the user
@@ -201,7 +203,7 @@ void *read_thread(void *parms)
                        	 fprintf(stderr, "Failed to wait for next clock tick\n");
 			//fprintf(stderr, "got timer signal");
 				pthread_mutex_lock(&mutex_lock1);
-				fgets((char*)buf->buffer, sizeof(cl_uchar)*700, fp);
+				fgets((char*)buf->buffer, sizeof(cl_uchar)*SET_SIZE, fp);
 				pthread_mutex_unlock(&mutex_lock1);		
 				pthread_cond_signal(&thread_cond1);
 	        }
@@ -360,7 +362,7 @@ int main(int argc, char *argv[])
 	char *password = NULL;
 	cl_uchar *password_hash = NULL;
 	opencl_device device;
-	
+    int file_cnt=0;	
 	
 	cl_uchar *buffer = NULL;	
 	size_t global_size, local_size;
@@ -388,7 +390,21 @@ int main(int argc, char *argv[])
 	sigset_t		sigset;
 	int			rc;
 
-	sigfillset(&sigset);
+    //Read file
+    char decrypt_file_name_buf[200]="";
+    FILE * fp;
+   	struct stat file_stat;
+
+    //	char *dir_path = NULL;
+   	char dir_path[200] = "";
+   	char dir_path_buf1[200] = "";
+   	char *dir_path_buf2 = NULL;
+   	char * token=NULL;
+
+   	struct dirent * dir_ent;
+   	DIR *dp;
+   
+    sigfillset(&sigset);
 	sigaddset(&sigset, TIMER_SIG);
 //	sigaddset(&sigset, SIGALRM);
 	pthread_sigmask(SIG_SETMASK, &sigset, NULL);
@@ -398,7 +414,7 @@ int main(int argc, char *argv[])
 	parse_command_line(argc, argv, &input_file_name, &output_file_name, &mode, &key_size_bits, &password, &device);
 	check_arguments(mode, key_size_bits, device);
 	input_file = input_file_name;
-	size_t size = 700;
+	size_t size = SET_SIZE;
 	size_t dec_size;
 	if (password == NULL) {
 		char *getpass(const char *prompt);
@@ -453,16 +469,6 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	
-	//set buffer size
-	buffer = (cl_uchar *)calloc(size,sizeof(cl_uchar));
-	
-	//buffer connection
-	thread_data->buffer=buffer;
-	thread_data->mode = mode;
-	//thread create
-	rc = pthread_create(&thread, NULL, read_thread, (void*)thread_data);
-	if (rc)
-		printf("read_thread : %s\n",strerror(errno));
 
 	/* create a power monitor thread. */
     pa.n_samples = 5;
@@ -482,6 +488,18 @@ int main(int argc, char *argv[])
 		perror("creating control_thr");
 		exit(1);
     }
+	//set buffer size
+	buffer = (cl_uchar *)calloc(size,sizeof(cl_uchar));
+
+#ifdef INTERRUPT
+    fprintf(stderr,"6ms interrupt mode.\n");	
+	//buffer connection
+	thread_data->buffer=buffer;
+	thread_data->mode = mode;
+	//thread create
+	rc = pthread_create(&thread, NULL, read_thread, (void*)thread_data);
+	if (rc)
+		printf("read_thread : %s\n",strerror(errno));
 
 
 	
@@ -529,6 +547,109 @@ int main(int argc, char *argv[])
 		//printf("-----------------%f ms \n",total_time);
 		pthread_mutex_unlock(&mutex_lock1);		
 	}
+#else
+	while (1)
+	{
+		struct timespec ts, te;
+		double total_time;
+
+		//end of input_file
+		if(end_point)
+			break;		
+
+		
+		//fprintf(stderr ,"output file name : %s\n",output_file_name_buf);
+
+	
+    	int count=0;
+		
+    	if(mode==AES_MODE_DECRYPT)
+    	{
+		    clock_gettime(CLOCK_REALTIME, &ts);
+    
+    		strcpy(dir_path_buf1, input_file);
+    
+    		token = strtok(dir_path_buf1,"/");
+    		
+    		while(token != NULL)
+    		{
+    			dir_path_buf2 = token;
+    			token = strtok(NULL, "/");	
+    		}
+    
+    		strncpy(dir_path,input_file,sizeof(char)*strlen(input_file)-sizeof(char)*strlen(dir_path_buf2));
+		
+		
+    		if((dp = opendir(dir_path)) == NULL)
+    		{
+       			fprintf(stderr,"opendir error!\n");
+	    		exit(1);
+    		}
+   			count++;
+    		if((dir_ent = readdir(dp)) == NULL)
+   			{
+   				fclose(fp);
+   				end_point=TRUE;
+   				break;
+   			}
+    		if(strcmp(dir_ent->d_name, ".") == 0 || strcmp(dir_ent->d_name, "..")==0)
+   				continue;	
+   
+   			file_cnt++;
+   			sprintf(decrypt_file_name_buf, "%s%d",input_file,file_cnt);			
+   			
+   			fp = fopen(decrypt_file_name_buf, "r");
+   			
+   			fstat(fileno(fp),&file_stat);	
+   			fread((cl_uchar*)buffer, sizeof(cl_uchar),file_stat.st_size, fp);
+		//apply aes
+    		if (apply_aes(buffer, &command_queue, &kernel, &cl_buffer, &cl_round_key, size, blocks, key_size_bits, global_size, local_size, mode) != -1)
+	    	{
+    		}	
+			if(end_point==1)
+				break;
+			strtok((char*)buffer,"\n");
+			dec_size = sizeof(cl_uchar)*strlen((char*)buffer);
+			write_file_append(output_file_name, buffer, dec_size);
+    		clock_gettime(CLOCK_REALTIME, &te);
+    		total_time = (te.tv_sec - ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/1000000;
+    		total_resp_time=total_resp_time + total_time;
+    		cnt_resp_time++;
+    		//printf("-----------------%f ms \n",total_time);
+    	}
+    	else if(mode == AES_MODE_ENCRYPT)
+    	{
+           	fp = fopen(input_file, "r");
+    	
+    		while(1)
+           	{
+		        clock_gettime(CLOCK_REALTIME, &ts);
+    			if (feof(fp))
+	    		{
+		    		fclose(fp);
+    				end_point=TRUE;
+    				break;
+    			}
+			//fprintf(stderr, "got timer signal");
+				fgets((char*)buffer, sizeof(cl_uchar)*SET_SIZE, fp);
+    		//apply aes
+	        	if (apply_aes(buffer, &command_queue, &kernel, &cl_buffer, &cl_round_key, size, blocks, key_size_bits, global_size, local_size, mode) != -1)
+        		{
+        		}	
+    			if(end_point==1)
+	    			break;
+                sprintf(output_file_name_buf, "%s%d",output_file_name, ++cnt);
+                write_file(output_file_name_buf, buffer, size);
+                clock_gettime(CLOCK_REALTIME, &te);
+        		total_time = (te.tv_sec - ts.tv_sec)*1000 + (te.tv_nsec - ts.tv_nsec)/1000000;
+        		total_resp_time=total_resp_time + total_time;
+        		cnt_resp_time++;
+    		    }
+    	}	
+
+	}
+#endif
+
 
 	if (buffer)
 		free(buffer);

@@ -2,7 +2,7 @@
 
 cpu_dir="/sys/devices/system/cpu"
 set_gov="userspace"
-cpu_freq=(1400000 1000000 200000)
+cpu_freq=(2000000 1400000 1000000 200000)
 
 gpu_dir="/sys/class/misc/mali0/device/clock" 
 gpu_freq=(600 543 480 420 350 266 177)
@@ -11,7 +11,7 @@ key_size=(128 192 256)
 
 
 #setting file permission and governor 
-for ((i=0;i<3;i++))
+for ((i=0;i<4;i++))
 do
     for cpu_num in $cpu_dir/cpu?
     do  
@@ -31,6 +31,7 @@ do
         do
            ./paes -i ./data/samples.txt -o ./output/output -m encrypt -d gpu -k ${key_size[$k]} -p odroid > ./log/log_cpu${cpu_freq[$i]}"_gpu"${gpu_freq[$j]}"_key"${key_size[$k]}
            echo "./paes -i ./data/samples.txt -o ./output/output -m encrypt -d gpu -k ${key_size[$k]} -p odroid > ./log/log_cpu${cpu_freq[$i]}"_gpu"${gpu_freq[$j]}"_key"${key_size[$k]}"
+           sleep(5)
         done
     done
 done
